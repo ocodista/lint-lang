@@ -15,7 +15,9 @@
   <section>
     <h2>Review notes</h2>
     <ul>
-      <li>Moved CLI argument definitions to <code>src/cli.rs</code> so <code>src/main.rs</code> stays below 500 lines.</li>
+      <li>Moved CLI argument definitions to <code>src/cli.rs</code> so domain command parsing stays isolated.</li>
+      <li>Moved default lint execution to <code>src/lint.rs</code>.</li>
+      <li>Added domain commands: <code>lint</code>, <code>models list</code>, <code>models download</code>, and <code>models select</code>.</li>
       <li>Added <code>lint-lang doctor</code> for setup diagnostics without entering the TUI.</li>
       <li>Kept model files out of git. GGUF and llamafile files are large and user-specific.</li>
       <li>Kept README focused on installation, first run, examples, and development commands.</li>
@@ -31,6 +33,8 @@
       <li><code>cargo fmt --check</code> passed.</li>
       <li><code>cargo test</code> passed.</li>
       <li><code>cargo clippy -- -D warnings</code> passed.</li>
+      <li><code>cargo run -- models list --plain</code> passed.</li>
+      <li><code>cargo run -- lint --no-clipboard --locale en "i has a aplle"</code> passed.</li>
     </ul>
   </section>
 

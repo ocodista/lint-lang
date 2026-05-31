@@ -11,11 +11,17 @@
 - [x] Add install and first-run instructions.
 - [x] Add links to related projects.
 - [x] Document `lint-lang doctor`.
+- [x] Document domain commands for linting and models.
 
 ## CLI
 
 - [x] Add `lint-lang doctor` setup diagnostics.
 - [x] Cover doctor output and local model checks with tests.
+- [x] Add explicit `lint-lang lint` while keeping default lint behavior.
+- [x] Add `lint-lang models list`.
+- [x] Add `lint-lang models download`.
+- [x] Add `lint-lang models select` with TUI model selection.
+- [x] Remove ellipsis from loading text.
 
 ## Repository
 
@@ -26,5 +32,5 @@
 
 ## Validation
 
-- [x] Run formatting, tests, and clippy after doctor command.
+- [ ] Run formatting, tests, and clippy after model commands.
 - [x] Record review notes in `implementation-notes.html`.

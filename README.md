@@ -72,18 +72,37 @@ Expected output:
 Open the model selector:
 
 ```sh
-lint-lang --configure
+lint-lang models select
+```
+
+List models in the TUI:
+
+```sh
+lint-lang models list
+```
+
+Print models as text:
+
+```sh
+lint-lang models list --plain
+```
+
+Download and select the default model:
+
+```sh
+lint-lang models download
 ```
 
 Use a local GGUF file directly:
 
 ```sh
-lint-lang --configure --model-path ~/models/Qwen3-8B-Q4_K_M.gguf
+lint-lang models select --model-path ~/models/Qwen3-8B-Q4_K_M.gguf
 ```
 
-Print the active model path:
+Legacy setup flags still work:
 
 ```sh
+lint-lang --configure
 lint-lang --print-model-path
 ```
 
@@ -106,7 +125,13 @@ lint-lang --pt-br "eu vai no mercado"
 English:
 
 ```sh
-lint-lang --locale en "i has a apple"
+lint-lang lint --locale en "i has a aplle"
+```
+
+Expected output:
+
+```txt
+I have an apple.
 ```
 
 ## Clipboard

@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     io::{self, IsTerminal, Stdout, Write},
     time::Duration,
 };
@@ -24,7 +23,11 @@ use ratatui::{
 };
 use tokio::task::JoinHandle;
 
-use crate::{config::ConfiguredModel, prompt::GrammarLocale};
+use crate::{
+    config::ConfiguredModel,
+    prompt::GrammarLocale,
+    tui_model_list::{ModelChoice, model_choices},
+};
 
 const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
@@ -34,11 +37,10 @@ pub enum ModelSelection {
     DownloadDefault,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ModelChoice {
-    selection: ModelSelection,
-    name: String,
-    detail: String,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ModelListMode {
+    Select,
+    Browse,
 }
 
 pub fn terminal_available() -> bool {
@@ -61,38 +63,12 @@ pub fn select_setup_action(
         bail!("no model choices available");
     }
 
-    let mut selected = current_model
-        .and_then(|current| {
-            choices.iter().position(|choice| {
-                choice.selection == ModelSelection::ConfiguredModel(current.clone())
-            })
-        })
-        .or_else(|| {
-            choices.iter().position(|choice| {
-                matches!(
-                    choice.selection,
-                    ModelSelection::ConfiguredModel(ConfiguredModel {
-                        backend: crate::config::ModelBackend::Llamafile { .. },
-                        ..
-                    }) | ModelSelection::ConfiguredModel(ConfiguredModel {
-                        backend: crate::config::ModelBackend::LlamaCpp { .. },
-                        ..
-                    })
-                )
-            })
-        })
-        .or_else(|| {
-            choices
-                .iter()
-                .position(|choice| matches!(choice.selection, ModelSelection::DownloadDefault))
-        })
-        .unwrap_or(0);
-
+    let mut selected = initial_model_choice(&choices, current_model);
     let mut session = TuiSession::new()?;
 
     loop {
         session.terminal.draw(|frame| {
-            draw_model_selector(frame, &choices, selected);
+            draw_model_selector(frame, &choices, selected, ModelListMode::Select);
         })?;
 
         if !event::poll(Duration::from_millis(200))? {
@@ -116,6 +92,51 @@ pub fn select_setup_action(
             KeyCode::Down | KeyCode::Char('j') => {
                 selected = (selected + 1).min(choices.len() - 1);
             }
+            KeyCode::Home => selected = 0,
+            KeyCode::End => selected = choices.len() - 1,
+            _ => {}
+        }
+    }
+}
+
+pub fn browse_model_list(
+    candidates: &[ConfiguredModel],
+    current_model: Option<&ConfiguredModel>,
+    allow_download: bool,
+) -> Result<()> {
+    if !terminal_available() {
+        bail!("model list requires an interactive terminal; pass --plain to print a text list");
+    }
+
+    let choices = model_choices(candidates, current_model, allow_download);
+    if choices.is_empty() {
+        bail!("no model choices available");
+    }
+
+    let mut selected = initial_model_choice(&choices, current_model);
+    let mut session = TuiSession::new()?;
+
+    loop {
+        session.terminal.draw(|frame| {
+            draw_model_selector(frame, &choices, selected, ModelListMode::Browse);
+        })?;
+
+        if !event::poll(Duration::from_millis(200))? {
+            continue;
+        }
+
+        let Event::Key(key) = event::read()? else {
+            continue;
+        };
+
+        if key.kind != KeyEventKind::Press {
+            continue;
+        }
+
+        match key.code {
+            KeyCode::Char('q') | KeyCode::Esc | KeyCode::Enter => return Ok(()),
+            KeyCode::Up | KeyCode::Char('k') => selected = selected.saturating_sub(1),
+            KeyCode::Down | KeyCode::Char('j') => selected = (selected + 1).min(choices.len() - 1),
             KeyCode::Home => selected = 0,
             KeyCode::End => selected = choices.len() - 1,
             _ => {}
@@ -158,7 +179,12 @@ async fn await_task<T>(handle: JoinHandle<Result<T>>) -> Result<T> {
     }
 }
 
-fn draw_model_selector(frame: &mut Frame<'_>, choices: &[ModelChoice], selected: usize) {
+fn draw_model_selector(
+    frame: &mut Frame<'_>,
+    choices: &[ModelChoice],
+    selected: usize,
+    mode: ModelListMode,
+) {
     let area = centered_rect(88, choices.len() as u16 + 8, frame.area());
     frame.render_widget(Clear, area);
 
@@ -179,7 +205,7 @@ fn draw_model_selector(frame: &mut Frame<'_>, choices: &[ModelChoice], selected:
                     .fg(Color::Cyan)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw(" setup needs a grammar model."),
+            Span::raw(model_list_title(mode)),
         ]),
         Line::from(
             "Choose a local GGUF/.llamafile, an installed Ollama model, or download the default Qwen GGUF.",
@@ -211,7 +237,7 @@ fn draw_model_selector(frame: &mut Frame<'_>, choices: &[ModelChoice], selected:
         );
     frame.render_stateful_widget(list, chunks[1], &mut state);
 
-    let footer = Paragraph::new("↑/↓ or j/k move · Enter saves · Esc/q cancels")
+    let footer = Paragraph::new(model_list_footer(mode))
         .alignment(Alignment::Center)
         .style(Style::default().fg(Color::DarkGray));
     frame.render_widget(footer, chunks[2]);
@@ -253,7 +279,7 @@ fn clear_inline_loading() -> Result<()> {
 fn loading_line(model_label: &str, locale: GrammarLocale, frame_index: usize) -> String {
     let spinner = SPINNER[frame_index % SPINNER.len()];
     format!(
-        "{spinner} Fixing {} grammar with {}…",
+        "{spinner} Fixing {} grammar with {}",
         locale.label(),
         compact_model_label(model_label)
     )
@@ -274,6 +300,49 @@ fn truncate_line(line: &str, max_chars: usize) -> String {
     let mut truncated = line.chars().take(keep).collect::<String>();
     truncated.push('…');
     truncated
+}
+
+fn model_list_title(mode: ModelListMode) -> &'static str {
+    match mode {
+        ModelListMode::Select => " setup needs a grammar model.",
+        ModelListMode::Browse => " models found for grammar linting.",
+    }
+}
+
+fn model_list_footer(mode: ModelListMode) -> &'static str {
+    match mode {
+        ModelListMode::Select => "↑/↓ or j/k move · Enter saves · Esc/q cancels",
+        ModelListMode::Browse => "↑/↓ or j/k move · Enter/Esc/q closes",
+    }
+}
+
+fn initial_model_choice(choices: &[ModelChoice], current_model: Option<&ConfiguredModel>) -> usize {
+    current_model
+        .and_then(|current| {
+            choices.iter().position(|choice| {
+                choice.selection == ModelSelection::ConfiguredModel(current.clone())
+            })
+        })
+        .or_else(|| {
+            choices.iter().position(|choice| {
+                matches!(
+                    choice.selection,
+                    ModelSelection::ConfiguredModel(ConfiguredModel {
+                        backend: crate::config::ModelBackend::Llamafile { .. },
+                        ..
+                    }) | ModelSelection::ConfiguredModel(ConfiguredModel {
+                        backend: crate::config::ModelBackend::LlamaCpp { .. },
+                        ..
+                    })
+                )
+            })
+        })
+        .or_else(|| {
+            choices
+                .iter()
+                .position(|choice| matches!(choice.selection, ModelSelection::DownloadDefault))
+        })
+        .unwrap_or(0)
 }
 
 fn centered_rect(width_percent: u16, height: u16, area: Rect) -> Rect {
@@ -301,81 +370,7 @@ fn centered_rect(width_percent: u16, height: u16, area: Rect) -> Rect {
     horizontal[1]
 }
 
-fn model_choices(
-    candidates: &[ConfiguredModel],
-    current_model: Option<&ConfiguredModel>,
-    allow_download: bool,
-) -> Vec<ModelChoice> {
-    let mut seen = HashSet::new();
-    let mut choices = Vec::new();
-
-    if let Some(current) = current_model {
-        add_choice(
-            &mut choices,
-            &mut seen,
-            ModelSelection::ConfiguredModel(current.clone()),
-            current.name.clone(),
-            format!("current config · {}", current.backend.kind_label()),
-        );
-    }
-
-    for candidate in candidates {
-        add_choice(
-            &mut choices,
-            &mut seen,
-            ModelSelection::ConfiguredModel(candidate.clone()),
-            candidate.name.clone(),
-            candidate_detail(candidate),
-        );
-    }
-
-    if allow_download {
-        add_choice(
-            &mut choices,
-            &mut seen,
-            ModelSelection::DownloadDefault,
-            "Download Qwen3 8B GGUF".to_owned(),
-            "default setup · native llama.cpp + Metal on Mac · no Ollama needed · ~5.0 GB"
-                .to_owned(),
-        );
-    }
-
-    choices
-}
-
-fn candidate_detail(candidate: &ConfiguredModel) -> String {
-    match &candidate.backend {
-        crate::config::ModelBackend::Llamafile { path } => {
-            format!("{} · {}", candidate.backend.kind_label(), path.display())
-        }
-        crate::config::ModelBackend::LlamaCpp { model_path, .. } => {
-            format!(
-                "{} · {}",
-                candidate.backend.kind_label(),
-                model_path.display()
-            )
-        }
-        crate::config::ModelBackend::Ollama { .. } => candidate.backend.kind_label().to_owned(),
-    }
-}
-
-fn add_choice(
-    choices: &mut Vec<ModelChoice>,
-    seen: &mut HashSet<ModelSelection>,
-    selection: ModelSelection,
-    name: String,
-    detail: String,
-) {
-    if seen.insert(selection.clone()) {
-        choices.push(ModelChoice {
-            selection,
-            name,
-            detail,
-        });
-    }
-}
-
-struct TuiSession {
+pub(crate) struct TuiSession {
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
@@ -400,58 +395,8 @@ impl Drop for TuiSession {
 
 #[cfg(test)]
 mod tests {
-    use super::{ModelSelection, loading_line, model_choices, truncate_line};
-    use crate::{
-        config::{ConfiguredModel, ModelBackend},
-        prompt::GrammarLocale,
-    };
-    use std::path::PathBuf;
-
-    #[test]
-    fn keeps_current_model_first() {
-        let current = ConfiguredModel {
-            name: "current.llamafile".to_owned(),
-            backend: ModelBackend::Llamafile {
-                path: PathBuf::from("current.llamafile"),
-            },
-        };
-        let candidate = ConfiguredModel {
-            name: "qwen.gguf".to_owned(),
-            backend: ModelBackend::LlamaCpp {
-                model_path: PathBuf::from("qwen.gguf"),
-                llama_cli: None,
-            },
-        };
-
-        let choices = model_choices(&[candidate], Some(&current), false);
-
-        assert_eq!(
-            choices[0].selection,
-            ModelSelection::ConfiguredModel(current)
-        );
-    }
-
-    #[test]
-    fn removes_duplicate_candidates() {
-        let candidate = ConfiguredModel {
-            name: "qwen.gguf".to_owned(),
-            backend: ModelBackend::LlamaCpp {
-                model_path: PathBuf::from("qwen.gguf"),
-                llama_cli: None,
-            },
-        };
-
-        let choices = model_choices(&[candidate.clone(), candidate], None, false);
-
-        assert_eq!(choices.len(), 1);
-    }
-
-    #[test]
-    fn adds_download_choice_for_setup() {
-        let choices = model_choices(&[], None, true);
-
-        assert_eq!(choices[0].selection, ModelSelection::DownloadDefault);
-    }
+    use super::{loading_line, truncate_line};
+    use crate::prompt::GrammarLocale;
 
     #[test]
     fn loading_status_is_single_line() {

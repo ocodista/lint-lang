@@ -73,7 +73,7 @@ fn postprocess_pt_br(output: &str) -> String {
 
 fn examples(locale: GrammarLocale) -> &'static str {
     match locale {
-        GrammarLocale::En => "Example:\nInput: i has a apple\nOutput: I have an apple.\n\n",
+        GrammarLocale::En => "Example:\nInput: i has a aplle\nOutput: I have an apple.\n\n",
         GrammarLocale::PtBr => {
             "Exemplo:\nEntrada: As verspera da prova, resolvi ir ao cinema. À propósito: penso em chegar tarde\nSaída: Às vésperas da prova, resolvi ir ao cinema. A propósito: penso em chegar tarde.\n\n"
         }
