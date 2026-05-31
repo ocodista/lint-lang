@@ -9,6 +9,13 @@
 
 - [x] Rewrite README around the product goal.
 - [x] Add install and first-run instructions.
+- [x] Add links to related projects.
+- [x] Document `lint-lang doctor`.
+
+## CLI
+
+- [x] Add `lint-lang doctor` setup diagnostics.
+- [x] Cover doctor output and local model checks with tests.
 
 ## Repository
 
@@ -19,5 +26,5 @@
 
 ## Validation
 
-- [x] Run formatting, tests, and clippy.
+- [x] Run formatting, tests, and clippy after doctor command.
 - [x] Record review notes in `implementation-notes.html`.

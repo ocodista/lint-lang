@@ -8,7 +8,8 @@ use crate::prompt::GrammarLocale;
 #[command(
     name = "lint-lang",
     version,
-    about = "Lint grammar locally for free with Rust and native llama.cpp."
+    about = "Lint grammar locally for free with Rust and native llama.cpp.",
+    after_help = "Command:\n  doctor    Check config, models, clipboard, and native llama.cpp support"
 )]
 pub struct Cli {
     /// Text to grammar-fix. If omitted, stdin is used when piped.

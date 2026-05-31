@@ -2,6 +2,7 @@ mod bundled;
 mod cli;
 mod config;
 mod discovery;
+mod doctor;
 mod download;
 mod inference;
 mod ollama;
@@ -26,6 +27,15 @@ use crate::cli::{Cli, LocalBackend};
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    if std::env::args_os()
+        .nth(1)
+        .and_then(|arg| arg.into_string().ok())
+        .as_deref()
+        == Some("doctor")
+    {
+        return doctor::run().await;
+    }
+
     let cli = Cli::parse();
 
     if cli.config_path {

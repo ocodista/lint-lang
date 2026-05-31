@@ -1,23 +1,30 @@
 # lint-lang
 
-Lint your grammar locally for free. Built with Rust and native llama.cpp.
+Lint your grammar locally for free. Built with [Rust](https://www.rust-lang.org/) and native [llama.cpp](https://github.com/ggml-org/llama.cpp).
 
-`lint-lang` fixes grammar, spelling, accents, punctuation, and capitalization. It keeps your text local by running a GGUF model on your machine. The default setup uses Qwen3 8B with Metal acceleration on Apple Silicon.
+`lint-lang` fixes grammar, spelling, accents, punctuation, and capitalization. It keeps your text local by running a [GGUF](https://github.com/ggml-org/ggml/blob/master/docs/gguf.md) model on your machine. The default setup uses [Qwen3 8B](https://huggingface.co/ggml-org/Qwen3-8B-GGUF) with [Metal](https://developer.apple.com/metal/) acceleration on Apple Silicon.
 
 ## Features
 
 - Local grammar fixes without an API bill.
-- Rust CLI installed as `lint-lang`.
-- Native GGUF inference through llama.cpp.
-- Default Qwen3 8B model download.
+- [Rust](https://www.rust-lang.org/) CLI installed as `lint-lang`.
+- Native GGUF inference through [llama.cpp](https://github.com/ggml-org/llama.cpp).
+- Default [Qwen3 8B GGUF](https://huggingface.co/ggml-org/Qwen3-8B-GGUF) model download.
 - pt-BR and English prompts.
 - Clipboard copy by default.
 - Single-line loading spinner.
 
+## Related projects
+
+- [llama.cpp](https://github.com/ggml-org/llama.cpp) runs GGUF models locally.
+- [llama-cpp-rs](https://github.com/utilityai/llama-cpp-rs) provides the Rust bindings.
+- [Qwen3](https://github.com/QwenLM/Qwen3) provides the default model family.
+- [Qwen3 8B GGUF](https://huggingface.co/ggml-org/Qwen3-8B-GGUF) is the default downloadable model.
+
 ## Requirements
 
-- Rust 1.91+
-- macOS with Xcode Command Line Tools for the best supported path
+- [Rust](https://www.rust-lang.org/tools/install) 1.91+
+- macOS with [Xcode Command Line Tools](https://developer.apple.com/xcode/resources/) for the best supported path
 - About 5 GB of disk space for the default Qwen3 8B GGUF model
 
 Install Rust if needed:
@@ -79,6 +86,14 @@ Print the active model path:
 ```sh
 lint-lang --print-model-path
 ```
+
+Check your setup:
+
+```sh
+lint-lang doctor
+```
+
+The doctor command checks the config file, selected model, local model file, default model path, clipboard access, and native llama.cpp support.
 
 ## Locales
 

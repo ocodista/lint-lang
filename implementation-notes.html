@@ -16,8 +16,10 @@
     <h2>Review notes</h2>
     <ul>
       <li>Moved CLI argument definitions to <code>src/cli.rs</code> so <code>src/main.rs</code> stays below 500 lines.</li>
+      <li>Added <code>lint-lang doctor</code> for setup diagnostics without entering the TUI.</li>
       <li>Kept model files out of git. GGUF and llamafile files are large and user-specific.</li>
       <li>Kept README focused on installation, first run, examples, and development commands.</li>
+      <li>Added README links for Rust, llama.cpp, llama-cpp-rs, GGUF, Qwen3, and Metal.</li>
       <li>Kept common Rust commands in the Makefile.</li>
       <li>Kept native llama.cpp on macOS with Metal for the default local path.</li>
     </ul>
