@@ -4,23 +4,27 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::prompt::GrammarLocale;
 
-#[derive(Debug)]
-pub enum DomainCommand {
-    Lint(Cli),
-    Models(ModelsCli),
-    Doctor,
-}
-
 #[derive(Debug, Parser)]
 #[command(
     name = "lint-lang",
     version,
-    about = "Lint grammar locally for free with Rust and native llama.cpp.",
-    after_help = "Commands:\n  lint               Lint grammar explicitly; default when no command is provided\n  models list        List configured, local, Ollama, and downloadable models\n  models download    Download the default or custom GGUF model\n  models select      Select and save a model with the TUI\n  doctor             Check config, models, clipboard, and native llama.cpp support"
+    about = "Lint grammar locally for free with Rust and native llama.cpp."
 )]
 pub struct Cli {
-    #[command(flatten)]
-    pub lint: LintArgs,
+    #[command(subcommand)]
+    pub command: DomainCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum DomainCommand {
+    /// Lint grammar. This is also the default command.
+    Lint(LintArgs),
+
+    /// Manage local grammar models.
+    Models(ModelsCli),
+
+    /// Check config, models, clipboard, and native llama.cpp support.
+    Doctor,
 }
 
 #[derive(Debug, Args)]
@@ -94,8 +98,7 @@ pub struct LintArgs {
     pub no_clipboard: bool,
 }
 
-#[derive(Debug, Parser)]
-#[command(name = "lint-lang models", about = "Manage local grammar models")]
+#[derive(Debug, Args)]
 pub struct ModelsCli {
     /// Ollama HTTP endpoint, only used for Ollama fallback models.
     #[arg(long)]
@@ -170,10 +173,6 @@ pub struct ModelsSelectArgs {
     pub backend: Option<LocalBackend>,
 }
 
-#[derive(Debug, Parser)]
-#[command(name = "lint-lang doctor", about = "Check lint-lang setup")]
-struct DoctorCli {}
-
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum LocalBackend {
     Auto,
@@ -191,81 +190,78 @@ impl LocalBackend {
     }
 }
 
-pub fn parse_domain_command() -> DomainCommand {
-    parse_domain_command_from(std::env::args_os().collect()).unwrap_or_else(|error| error.exit())
+pub fn parse_cli() -> Cli {
+    parse_cli_from(std::env::args_os().collect()).unwrap_or_else(|error| error.exit())
 }
 
-fn parse_domain_command_from(mut args: Vec<OsString>) -> Result<DomainCommand, clap::Error> {
-    if args.is_empty() {
-        args.push(OsString::from("lint-lang"));
+fn parse_cli_from(mut args: Vec<OsString>) -> Result<Cli, clap::Error> {
+    if should_default_to_lint(args.get(1)) {
+        args.insert(1, OsString::from("lint"));
     }
 
-    match args.get(1).and_then(|arg| arg.to_str()) {
-        Some("doctor") => parse_doctor_command(args),
-        Some("lint") => parse_lint_command(args),
-        Some("models") => parse_models_command(args),
-        _ => Cli::try_parse_from(args).map(DomainCommand::Lint),
-    }
+    Cli::try_parse_from(args)
 }
 
-fn parse_doctor_command(mut args: Vec<OsString>) -> Result<DomainCommand, clap::Error> {
-    args.remove(1);
-    args[0] = OsString::from("lint-lang doctor");
-    DoctorCli::try_parse_from(args).map(|_| DomainCommand::Doctor)
-}
+fn should_default_to_lint(first_arg: Option<&OsString>) -> bool {
+    let Some(first_arg) = first_arg.and_then(|arg| arg.to_str()) else {
+        return true;
+    };
 
-fn parse_lint_command(mut args: Vec<OsString>) -> Result<DomainCommand, clap::Error> {
-    args.remove(1);
-    args[0] = OsString::from("lint-lang lint");
-    Cli::try_parse_from(args).map(DomainCommand::Lint)
-}
-
-fn parse_models_command(mut args: Vec<OsString>) -> Result<DomainCommand, clap::Error> {
-    args.remove(1);
-    args[0] = OsString::from("lint-lang models");
-    ModelsCli::try_parse_from(args).map(DomainCommand::Models)
+    !matches!(
+        first_arg,
+        "lint" | "models" | "doctor" | "--help" | "-h" | "--version" | "-V"
+    )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{DomainCommand, ModelsCommand, parse_domain_command_from};
+    use super::{DomainCommand, ModelsCommand, parse_cli_from};
 
     #[test]
     fn parses_default_lint_command() {
-        let command = parse_domain_command_from(args(["lint-lang", "hello"])).unwrap();
+        let cli = parse_cli_from(args(["lint-lang", "hello"])).unwrap();
 
-        let DomainCommand::Lint(cli) = command else {
+        let DomainCommand::Lint(lint_args) = cli.command else {
             panic!("expected lint command");
         };
-        assert_eq!(cli.lint.text, ["hello"]);
+        assert_eq!(lint_args.text, ["hello"]);
+    }
+
+    #[test]
+    fn parses_default_lint_options() {
+        let cli = parse_cli_from(args(["lint-lang", "--locale", "en", "hello"])).unwrap();
+
+        let DomainCommand::Lint(lint_args) = cli.command else {
+            panic!("expected lint command");
+        };
+        assert_eq!(lint_args.text, ["hello"]);
     }
 
     #[test]
     fn parses_explicit_lint_command() {
-        let command = parse_domain_command_from(args(["lint-lang", "lint", "hello"])).unwrap();
+        let cli = parse_cli_from(args(["lint-lang", "lint", "hello"])).unwrap();
 
-        let DomainCommand::Lint(cli) = command else {
+        let DomainCommand::Lint(lint_args) = cli.command else {
             panic!("expected lint command");
         };
-        assert_eq!(cli.lint.text, ["hello"]);
+        assert_eq!(lint_args.text, ["hello"]);
     }
 
     #[test]
     fn parses_models_list_command() {
-        let command =
-            parse_domain_command_from(args(["lint-lang", "models", "list", "--plain"])).unwrap();
+        let cli = parse_cli_from(args(["lint-lang", "models", "list", "--plain"])).unwrap();
 
-        let DomainCommand::Models(cli) = command else {
+        let DomainCommand::Models(models_args) = cli.command else {
             panic!("expected models command");
         };
-        assert!(matches!(cli.command, ModelsCommand::List(list) if list.plain));
+        assert!(matches!(models_args.command, ModelsCommand::List(list) if list.plain));
     }
 
     #[test]
     fn parses_doctor_command() {
-        let command = parse_domain_command_from(args(["lint-lang", "doctor"])).unwrap();
+        let cli = parse_cli_from(args(["lint-lang", "doctor"])).unwrap();
 
-        assert!(matches!(command, DomainCommand::Doctor));
+        assert!(matches!(cli.command, DomainCommand::Doctor));
     }
 
     fn args<const N: usize>(values: [&str; N]) -> Vec<std::ffi::OsString> {

@@ -18,8 +18,8 @@ use crate::cli::DomainCommand;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    match cli::parse_domain_command() {
-        DomainCommand::Lint(cli) => lint::run(cli.lint).await,
+    match cli::parse_cli().command {
+        DomainCommand::Lint(args) => lint::run(args).await,
         DomainCommand::Models(cli) => models::run(cli).await,
         DomainCommand::Doctor => doctor::run().await,
     }

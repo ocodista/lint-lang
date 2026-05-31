@@ -32,5 +32,5 @@
 
 ## Validation
 
-- [ ] Run formatting, tests, and clippy after model commands.
+- [x] Run formatting, tests, and clippy after model commands.
 - [x] Record review notes in `implementation-notes.html`.
