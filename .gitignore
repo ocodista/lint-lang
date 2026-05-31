@@ -1,0 +1,8 @@
+/target
+/.pi
+/models
+*.gguf
+*.llamafile
+*.part
+*.cast
+.DS_Store

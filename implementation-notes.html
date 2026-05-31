@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>lint-lang implementation notes</title>
+</head>
+<body>
+  <h1>lint-lang implementation notes</h1>
+
+  <section>
+    <h2>Goal</h2>
+    <p>Lint grammar locally for free with a Rust CLI backed by local GGUF models.</p>
+  </section>
+
+  <section>
+    <h2>Review notes</h2>
+    <ul>
+      <li>Moved CLI argument definitions to <code>src/cli.rs</code> so <code>src/main.rs</code> stays below 500 lines.</li>
+      <li>Kept model files out of git. GGUF and llamafile files are large and user-specific.</li>
+      <li>Kept README focused on installation, first run, examples, and development commands.</li>
+      <li>Kept common Rust commands in the Makefile.</li>
+      <li>Kept native llama.cpp on macOS with Metal for the default local path.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Validation</h2>
+    <ul>
+      <li><code>cargo fmt --check</code> passed.</li>
+      <li><code>cargo test</code> passed.</li>
+      <li><code>cargo clippy -- -D warnings</code> passed.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Open questions</h2>
+    <ul>
+      <li>Decide whether future releases should provide signed binaries.</li>
+      <li>Decide whether to add GitHub Actions after the first private push.</li>
+    </ul>
+  </section>
+</body>
+</html>

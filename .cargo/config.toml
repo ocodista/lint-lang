@@ -1,0 +1,6 @@
+[env]
+# llama.cpp's CMake build auto-detects Homebrew ccache. This machine has a
+# stale ccache dylib, so force a harmless launcher to stop llama.cpp from
+# installing ccache as RULE_LAUNCH_COMPILE.
+CMAKE_C_COMPILER_LAUNCHER = "/usr/bin/env"
+CMAKE_CXX_COMPILER_LAUNCHER = "/usr/bin/env"

@@ -1,0 +1,31 @@
+[package]
+name = "lint-lang"
+version = "0.1.0"
+edition = "2024"
+description = "Lint grammar locally for free with Rust and native llama.cpp"
+license = "MIT"
+
+[features]
+default = []
+# Compile a local .llamafile or .gguf into the CLI. Build with:
+# LINT_LANG_BUNDLED_MODEL=/absolute/path/to/model.gguf cargo build --release --features bundled-model
+bundled-model = []
+
+[dependencies]
+anyhow = "1.0"
+arboard = "3.6"
+clap = { version = "4.5", features = ["derive"] }
+crossterm = "0.28"
+directories = "5.0"
+encoding_rs = "0.8"
+ratatui = { version = "0.29", default-features = false, features = ["crossterm"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.48", features = ["fs", "io-util", "macros", "rt-multi-thread", "time"] }
+toml = "0.8"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+llama-cpp-2 = { version = "0.1.146", default-features = false, features = ["metal"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+llama-cpp-2 = { version = "0.1.146", default-features = false }
